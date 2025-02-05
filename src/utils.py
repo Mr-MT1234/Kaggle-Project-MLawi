@@ -9,7 +9,7 @@ def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
     for c in output.columns:
         output = output.drop(output.index[output[c].isnull()])
 
-    # Reorder the dates rows to be in chronological order
+    # Reorder the date rows to be in chronological order
     def sort_row(row):
         to_date_time = lambda x: datetime.strptime(x, '%d-%m-%Y')
         
@@ -19,7 +19,7 @@ def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
         date3 = to_date_time(row.date3), row.change_status_date3
         date4 = to_date_time(row.date4), row.change_status_date4
 
-        s = sorted([date0, date1,date2,date3,date4])
+        s = sorted([date0, date1, date2, date3, date4])
 
         return {
             'date0' : s[0][0],
@@ -57,8 +57,10 @@ _geography_types_representations = {
 }
 
 def one_hot_encode_geography_type(geography_type: str) -> np.ndarray:
+    # if geography_type == 'N,A':
+    #     return {f'geography_type_{i}':x for i, x in enumerate(_geography_types_representations['N,A'])}
     if geography_type == 'N,A':
-        return {f'geography_type_{i}':x for i, x in enumerate(_geography_types_representations['N,A'])}
+        return _geography_types_representations['N,A']
     
     representation = np.zeros(11)
     for part in geography_type.split(','):

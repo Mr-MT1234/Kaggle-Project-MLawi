@@ -11,6 +11,10 @@ CHANGE_TYPE_MEGA_PROJECTS = 5
 
 
 class Model(ABC):
+    def __init__(self):
+        super().__init__()
+        self.model = None
+    
     @abstractmethod
     def preprocess_dataset(self, dataset : pd.DataFrame):
         pass
