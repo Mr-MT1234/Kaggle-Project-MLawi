@@ -5,7 +5,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 class MulticlassRegression(Model):
     def __init__(self):
-        super().__init__()
+        # Create and train logistic regression model
+        self.model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=200)
     
     def preprocess_dataset(self, dataset):
     
@@ -45,12 +46,7 @@ class MulticlassRegression(Model):
         # Separate samples and labels
         X_train, y_train = dataset.drop('target', axis=1), dataset['target']
 
-        # Create and train logistic regression model
-        model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=200)
-        model.fit(X_train, y_train)
-        
-        # Update the model
-        self.model = model
+        self.model.fit(X_train, y_train)
         
     def predict(self, input):
 

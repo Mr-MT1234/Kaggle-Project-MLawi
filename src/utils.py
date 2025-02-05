@@ -8,6 +8,7 @@ def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
     # Remove rows that contain None
     for c in output.columns:
         output = output.drop(output.index[output[c].isnull()])
+        
 
     # Reorder the date rows to be in chronological order
     def sort_row(row):
@@ -40,6 +41,12 @@ def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
     output = output.join(datetable)
 
     return output
+
+def split_data_labels(dataset: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    data = dataset.drop(columns=['change_type'])
+    labels = pd.DataFrame(dataset['change_type'])
+
+    return data, labels
 
 _geography_types_representations = {
     'N,A':              np.zeros(11),

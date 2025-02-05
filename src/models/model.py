@@ -1,20 +1,18 @@
 import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
+from enum import Enum
 
-CHANGE_TYPE_DEMOLITION = 0
-CHANGE_TYPE_ROAD = 1
-CHANGE_TYPE_RESIDENTIAL = 2
-CHANGE_TYPE_COMMERCIAL = 3
-CHANGE_TYPE_INDUSTRIAL = 4
-CHANGE_TYPE_MEGA_PROJECTS = 5
+class ChangeTypes(Enum):
+    DEMOLITION = 0
+    ROAD = 1
+    RESIDENTIAL = 2
+    COMMERCIAL = 3
+    INDUSTRIAL = 4
+    MEGA_PROJECTS = 5
 
 
 class Model(ABC):
-    def __init__(self):
-        super().__init__()
-        self.model = None
-    
     @abstractmethod
     def preprocess_dataset(self, dataset : pd.DataFrame):
         pass
