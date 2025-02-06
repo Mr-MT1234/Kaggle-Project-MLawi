@@ -109,3 +109,103 @@ _geography_change_status = {
 def one_hot_encode_change_status(change_status: str) -> np.ndarray:
     return _geography_change_status[change_status]
 
+def polygon_area_perimeter(coords):
+    coords = np.array(coords)
+    
+    # Ensure the polygon is closed (first point = last point)
+    if not np.array_equal(coords[0], coords[-1]):
+        coords = np.vstack([coords, coords[0]])  # Append first point to close polygon
+
+    # Shoelace formula for area
+    x = coords[:, 0]
+    y = coords[:, 1]
+    area = 0.5 * abs(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
+
+    # Compute perimeter (sum of distances between consecutive points)
+    perimeter = np.sum(np.sqrt(np.diff(x) ** 2 + np.diff(y) ** 2))
+    
+    return area, perimeter
+
+
+def transform_dataset_linear_regression(dataset):
+    output = dataset
+
+    def transform_row(row):
+
+        d0=pd.to_datetime(row.date0, format='%d-%m-%Y')
+        d1=pd.to_datetime(row.date1, format='%d-%m-%Y')
+        d2=pd.to_datetime(row.date2, format='%d-%m-%Y')
+        d3=pd.to_datetime(row.date3, format='%d-%m-%Y')
+        d4=pd.to_datetime(row.date4, format='%d-%m-%Y')
+
+        a, p=polygon_area_perimeter(row.geometry)
+
+        return {
+            'diff0' : (d1-d0).days/365.25,
+        'diff1' : (d2-d1).days/365.25,
+        'diff2' : (d3-d2).days/365.25,
+        'diff3' : (d4-d3).days/365.25,
+        
+        'area': a,
+       'perimeter': p,
+       'areaTperimeter': a*p,
+       'areaSURperimeter':a/p,
+        }
+
+    datetable = output.apply(transform_row, axis=1, result_type='expand')
+
+    output = output.drop(columns=['date0', 'date1','date2','date3', 'date4', 'geometry'])
+    output = output.join(datetable)
+
+    return output
+
+
+    return {
+        'diff0' : (d1-d0).days/365.25,
+        'diff1' : (d2-d1).days/365.25,
+        'diff2' : (d3-d2).days/365.25,
+        'diff3' : (d4-d3).days/365.25,
+        'change_status_date0' : row.change_status_date0,
+        'change_status_date1' : row.change_status_date1,
+        'change_status_date2' : row.change_status_date2,
+        'change_status_date3' : row.change_status_date3,
+        'change_status_date4' : row.change_status_date4,
+        'urban_type':row.urban_type,
+        'geography_type':row.geography_type,
+                'img_red_mean_date1':row.img_red_mean_date1,
+       'img_green_mean_date1':row.img_green_mean_date1,
+        'img_blue_mean_date1':row.img_blue_mean_date1,
+        'img_red_std_date1':row.img_red_std_date1,
+       'img_green_std_date1':row.img_green_std_date1,
+        'img_blue_std_date1':row.img_blue_std_date1,
+        'img_red_mean_date2':row.img_red_mean_date2,
+       'img_green_mean_date2':row.img_green_mean_date2,
+        'img_blue_mean_date2':row.img_blue_mean_date2,
+        'img_red_std_date2':row.img_red_std_date2,
+       'img_green_std_date2':row.img_green_std_date2,
+        'img_blue_std_date2':row.img_blue_std_date2,
+        'img_red_mean_date3':row.img_red_mean_date3,
+       'img_green_mean_date3':row.img_green_mean_date3,
+        'img_blue_mean_date3':row.img_blue_mean_date3,
+        'img_red_std_date3':row.img_red_std_date3,
+       'img_green_std_date3':row.img_green_std_date3,
+        'img_blue_std_date3':row.img_blue_std_date3,
+        'img_red_mean_date4':row.img_red_mean_date4,
+       'img_green_mean_date4':row.img_green_mean_date4,
+        'img_blue_mean_date4':row.img_blue_mean_date4,
+        'img_red_std_date4':row.img_red_std_date4,
+       'img_green_std_date4':row.img_green_std_date4,
+        'img_blue_std_date4':row.img_blue_std_date4,
+        'img_red_mean_date5':row.img_red_mean_date5,
+       'img_green_mean_date5':row.img_green_mean_date5,
+        'img_blue_mean_date5':row.img_blue_mean_date5,
+        'img_red_std_date5':row.img_red_std_date5,
+       'img_green_std_date5':row.img_green_std_date5,
+        'img_blue_std_date5':row.img_blue_std_date5,
+        
+        'area': a,
+       'perimeter': p,
+       'areaTperimeter': a*p,
+       'areaSURperimeter':a/p,
+
+    }
