@@ -16,7 +16,6 @@ class Model(ABC):
     @abstractmethod
     def preprocess_dataset(self, dataset : pd.DataFrame):
         pass
-
     @abstractmethod
     def train(self, dataset):
         pass

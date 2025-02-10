@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import torch
+from torch.utils.data import Dataset
+from .models.model import ChangeTypes
 
 def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
     output = dataset
@@ -41,6 +44,55 @@ def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
     output = output.join(datetable)
 
     return output
+
+def reorder_date(dataset):
+    output = dataset
+
+    def sort_row(row):
+        if row[['date0','date1','date2','date3','date4']].isnull().any():
+            {
+            'date0' : s[0][0],
+            'change_status_date0' : s[0][1],
+            'date1' : s[1][0],
+            'change_status_date1' : s[1][1],
+            'date2' : s[2][0],
+            'change_status_date2' : s[2][1],
+            'date3' : s[3][0],
+            'change_status_date3' : s[3][1],
+            'date4' : s[4][0],
+            'change_status_date4' : s[4][1],
+            }
+
+        to_date_time = lambda x: datetime.strptime(x, '%d-%m-%Y')
+        
+        date0 = to_date_time(row.date0), row.change_status_date0
+        date1 = to_date_time(row.date1), row.change_status_date1
+        date2 = to_date_time(row.date2), row.change_status_date2
+        date3 = to_date_time(row.date3), row.change_status_date3
+        date4 = to_date_time(row.date4), row.change_status_date4
+
+        s = sorted([date0, date1, date2, date3, date4])
+
+        return {
+            'date0' : s[0][0],
+            'change_status_date0' : s[0][1],
+            'date1' : s[1][0],
+            'change_status_date1' : s[1][1],
+            'date2' : s[2][0],
+            'change_status_date2' : s[2][1],
+            'date3' : s[3][0],
+            'change_status_date3' : s[3][1],
+            'date4' : s[4][0],
+            'change_status_date4' : s[4][1],
+        }
+
+    datetable = output.apply(sort_row, axis=1, result_type='expand')
+
+    output = output.drop(columns=['date0', 'change_status_date0', 'date1', 'change_status_date1','date2', 'change_status_date2','date3', 'change_status_date3', 'date4', 'change_status_date4'])
+    output = output.join(datetable)
+
+    return output
+
 
 def split_data_labels(dataset: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     data = dataset.drop(columns=['change_type'])
@@ -93,7 +145,8 @@ def one_hot_encode_urban_type(urban_type):
         representation += _urban_types_representations[part]
     return representation
 
-_geography_change_status = {
+_change_status = {
+        None: np.zeros(10),
         'Greenland' : np.eye(10)[0],
         'Prior Construction' : np.eye(10)[1],
         'Land Cleared' : np.eye(10)[2],
@@ -107,5 +160,28 @@ _geography_change_status = {
 }
 
 def one_hot_encode_change_status(change_status: str) -> np.ndarray:
-    return _geography_change_status[change_status]
+    return _change_status[change_status]
+
+_change_types = {
+    'Demolition': np.array([1,0,0,0,0,0]),
+    'Road': np.array([0,1,0,0,0,0]),
+    'Residential': np.array([0,0,1,0,0,0]),
+    'Commercial': np.array([0,0,0,1,0,0]),
+    'Industrial': np.array([0,0,0,0,1,0]),
+    'Mega Projects': np.array([0,0,0,0,0,1]),
+}
+
+def one_hot_encode_change_type(change_type: str) -> np.ndarray:
+    return _change_types[change_type]
+
+class Dataset:
+    def __init__(self, dataset, labels):
+        self.dataset = dataset
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, index):
+        return (self.dataset[index], self.labels[index])
 
