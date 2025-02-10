@@ -185,3 +185,52 @@ class Dataset:
     def __getitem__(self, index):
         return (self.dataset[index], self.labels[index])
 
+def polygon_area_perimeter(coords):
+    coords = np.array(coords)
+    
+    # Ensure the polygon is closed (first point = last point)
+    if not np.array_equal(coords[0], coords[-1]):
+        coords = np.vstack([coords, coords[0]])  # Append first point to close polygon
+
+    # Shoelace formula for area
+    x = coords[:, 0]
+    y = coords[:, 1]
+    area = 0.5 * abs(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
+
+    # Compute perimeter (sum of distances between consecutive points)
+    perimeter = np.sum(np.sqrt(np.diff(x) ** 2 + np.diff(y) ** 2))
+    
+    return area, perimeter
+
+
+def transform_dataset_linear_regression(dataset):
+    output = dataset
+
+    def transform_row(row):
+
+        d0=pd.to_datetime(row.date0, format='%d-%m-%Y')
+        d1=pd.to_datetime(row.date1, format='%d-%m-%Y')
+        d2=pd.to_datetime(row.date2, format='%d-%m-%Y')
+        d3=pd.to_datetime(row.date3, format='%d-%m-%Y')
+        d4=pd.to_datetime(row.date4, format='%d-%m-%Y')
+
+        a, p=polygon_area_perimeter(row.geometry)
+
+        return {
+            'diff0' : (d1-d0).days/365.25,
+        'diff1' : (d2-d1).days/365.25,
+        'diff2' : (d3-d2).days/365.25,
+        'diff3' : (d4-d3).days/365.25,
+        
+        'area': a,
+       'perimeter': p,
+       'areaTperimeter': a*p,
+       'areaSURperimeter':a/p,
+        }
+
+    datetable = output.apply(transform_row, axis=1, result_type='expand')
+
+    output = output.drop(columns=['date0', 'date1','date2','date3', 'date4', 'geometry'])
+    output = output.join(datetable)
+
+    return output
