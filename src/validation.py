@@ -19,57 +19,78 @@ class ValidationReport:
     confusion_matrices: np.ndarray
 
 class Validator:
-    def __init__(self, dataset: pd.DataFrame, labels: pd.DataFrame, fold_count : int =10, folds =None):
+    def __init__(self, dataset, labels, fold_count : int=10, folds =None):
         self.dataset = dataset
         self.labels = labels
+        all_labels = set(labels)
+
+        indeces_per_label = { label : [i for i in range(len(dataset)) if labels[i] == label] for label in all_labels }
 
         if folds is None:
-            m = len(dataset)
-            fold_size = m / fold_count
-            indeces = list(range(m))
-            random.shuffle(indeces)
-            self.folds = [ indeces[int(fold_size*i) : int(fold_size*(i+1)) ] for i in range(fold_count)]
+
+            folds_per_label = {}
+
+            for label, indeces in indeces_per_label.items():
+                m = len(indeces)
+                fold_size = m / fold_count
+                random.shuffle(indeces)
+                folds_per_label[label] = [ indeces[int(fold_size*i) : int(fold_size*(i+1)) ] for i in range(fold_count)]
+
+            def concat(lists):
+                out = []
+                for l in lists:
+                    out += l
+                return out
+
+            self.folds = [concat(folds_per_label[label][i] for label in all_labels ) for i in range(fold_count)]
 
         else:
             self.folds = folds
 
-    def validate(self, model: Model) -> ValidationReport:
+    def validate(self, models: list[Model]) -> ValidationReport:
         fold_count = len(self.folds)
+        assert len(models) == fold_count, "Number of models does no match the fold_count"
         
         percisions = np.empty((fold_count, len(ChangeTypes)))
         recalls = np.empty((fold_count, len(ChangeTypes)))
         accuracies = np.empty(fold_count)
         confusion_matrices = np.zeros((fold_count, len(ChangeTypes), len(ChangeTypes)))
 
-        for fold_id, fold in enumerate(self.folds):
-            training_subset = self.dataset.drop(index=fold)
-            validation_subset = self.dataset.iloc[fold]
-            validation_labels = self.labels.iloc[fold]
+        for fold_id in range(fold_count):
+            fold = self.folds[fold_id]
+            model = models[fold_id]
 
-            training_subset = model.preprocess_dataset(training_subset)
-            validation_subset = model.preprocess_dataset(validation_subset)
+            print(f"Fold {fold_id}/{fold_count}: preparing_data", end="")
+            training_indeces = np.ones(len(self.dataset), dtype=bool)
+            training_indeces[fold] = False
+            training_subset = self.dataset[training_indeces]
+            training_labels = self.labels[training_indeces]
+            validation_subset = self.dataset[fold]
+            validation_labels = self.labels[fold]
 
-            model.train(training_subset)
+            print(f", training", end="")
+            model.train(training_subset, training_labels)
+
+            print(f", validating", end="")
             predictions = model.predict(validation_subset)
-
-            confusion_data = validation_labels.join(predictions, lsuffix='_true', rsuffix='_predicted') \
-                .groupby(['change_type_true', 'change_type_predicted']) \
-                .size()
             
-            for (row_true, row_predicted), count in confusion_data.items():
-                confusion_matrices[fold_id, row_true, row_predicted] = count
+
+            for row_true, row_predicted in zip(validation_labels, predictions):
+                confusion_matrices[fold_id, row_true, row_predicted] +=1
             
             for change_type in ChangeTypes:
                 change_type = change_type.value
                 tp = confusion_matrices[fold_id, change_type, change_type]
                 fp = confusion_matrices[fold_id, :, change_type].sum() - tp
-                fn = confusion_matrices[fold_id, change_type, : ] - tp
-                percisions[fold_id, change_type] = tp / (tp + fp)
-                recalls[fold_id, change_type] = tp / (tp + fn)
+                fn = confusion_matrices[fold_id, change_type, : ].sum() - tp
+                percisions[fold_id, change_type] = tp / (tp + fp + 0.0000001)
+                recalls[fold_id, change_type] = tp / (tp + fn + 0.0000001)
             
-            accuracies[fold_id] = np.diag(confusion_matrices[fold_id]).sum() / confusion_matrices[fold_id].sum()
+            accuracies[fold_id] = np.diag(confusion_matrices[fold_id]).sum() / len(validation_subset)
 
-        f1_scores = 2*percisions*recalls / (percisions + recalls)
+            print(", done")
+
+        f1_scores = 2*percisions*recalls / (percisions + recalls + 0.0000001)
 
         avg_accuracy = accuracies.mean()
         avg_f1_scores =  f1_scores.mean(axis=0)
