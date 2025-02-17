@@ -5,6 +5,16 @@ import torch
 from torch.utils.data import Dataset
 from .models.model import ChangeTypes
 
+
+def make_progress_bar(percentage, length):
+    percentage_clamped = max(0.0, min(1.0, float(percentage)))
+    filled = round(percentage_clamped * length)
+    filled = max(0, min(length, filled)) 
+    
+    # Create progress bar string
+    bar = '█' * filled + '-' * (length - filled)
+    return f'[{bar}]'
+
 def clean_dataset(dataset: pd.DataFrame) -> pd.DataFrame:
     output = dataset
 

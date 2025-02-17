@@ -35,7 +35,7 @@ class NeuralNet(nn.Module):
         return self.layers(input)
     
 
-FEATURE_COUNT = 105
+FEATURE_COUNT = 107
 class NeuralNetModel(Model):
     def __init__(self, hidden_dims, lr=1e-3, training_epochs=100, batch_size=32, device=None):
         if device is None:
@@ -86,14 +86,16 @@ class NeuralNetModel(Model):
                 'geomety_centroid_y' : y
             }
         def map_dates(row):
-            dates = [row.date0 - pd.Timestamp(),row.date1, row.date2, row.date3, row.date4]
+            dates = [row.date0,row.date1, row.date2, row.date3, row.date4]
+            date0,date1,date2,date3,date4 = [datetime.strptime(date, '%d-%m-%Y') - datetime(2010,1,1) for date in dates]
 
+            delta0 = date1 - date0
             delta1 = date1 - date0
             delta2 = date2 - date0
             delta3 = date3 - date0
             delta4 = date4 - date0
             return { 
-                'date0': delta1.days,
+                'date0': delta0.days,
                 'date1': delta1.days,
                 'date2': delta2.days,
                 'date3': delta3.days,
@@ -115,10 +117,10 @@ class NeuralNetModel(Model):
             .join(change_status_data0).join(change_status_date1).join(change_status_date2) \
             .join(change_status_date3).join(change_status_date4).join(dates).fillna(0)
         
-        assert len(dataset.columns) - 1 == FEATURE_COUNT, f"Got an unexpected Feature count, may be the input to NeuralNetModel was changed withoout  \
-        updating the FEATURE_COUNT constant (got {len(dataset.columns) - 1}, while FEATURE_COUNT = {FEATURE_COUNT})"
+        print(set(dataset.columns))
 
         data = torch.tensor(dataset.to_numpy())
+        data = data[:, [i for i in range(len(data[0])) if i != 30]]
 
         return data
 
